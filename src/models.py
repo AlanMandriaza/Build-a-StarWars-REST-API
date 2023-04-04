@@ -1,26 +1,28 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import ForeignKey, Column, Integer, String, DateTime
+import datetime
 
 db = SQLAlchemy()
 
 class User(db.Model):
-    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(250), nullable=False)
-    password = db.Column(db.String(250), nullable=False)
-    first_name = db.Column(db.String(250), nullable=True)
-    last_name = db.Column(db.String(250), nullable=True)
-    subscription_date = db.Column(db.DateTime, nullable=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(80), nullable=False)
+    first_name = db.Column(db.String(120), nullable=True)
+    last_name = db.Column(db.String(120), nullable=True)
+    subscription_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     favorites = db.relationship("Favorite", back_populates="user")
 
     def __repr__(self):
-        return '<User %r>' % self.email
+        return '<User %r>' % self.username
 
     def serialize(self):
         return {
             "id": self.id,
             "email": self.email,
-            # do not serialize the password, it's a security breach
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "subscription_date": self.subscription_date
         }
 
 class Favorite(db.Model):

@@ -1,6 +1,3 @@
-"""
-This module takes care of starting the API Server, Loading the DB and Adding the endpoints
-"""
 import os
 from flask import Flask, request, jsonify, url_for
 from flask_migrate import Migrate
@@ -36,13 +33,59 @@ def sitemap():
     return generate_sitemap(app)
 
 @app.route('/user', methods=['GET'])
-def handle_hello():
+def get_users():
+    users = User.query.all()
+    users = list(map(lambda user: user.serialize(), users))
+    return jsonify(users), 200
 
-    response_body = {
-        "msg": "Hello, this is your GET /user response "
-    }
+@app.route('/user', methods=['POST'])
+def create_user():
+    body = request.get_json()
 
-    return jsonify(response_body), 200
+    if 'email' not in body or 'password' not in body:
+        return jsonify({"msg": "Missing required fields"}), 400
+
+    new_user = User(email=body['email'], password=body['password'])
+
+    if 'first_name' in body:
+        new_user.first_name = body['first_name']
+    if 'last_name' in body:
+        new_user.last_name = body['last_name']
+
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify(new_user.serialize()), 201
+
+
+@app.route('/user/<int:user_id>', methods=['PUT'])
+def update_user(user_id):
+    body = request.get_json()
+    user = User.query.get(user_id)
+
+    if user is None:
+        return jsonify({"msg": "User not found"}), 404
+
+    if 'username' in body:
+        user.username = body['username']
+    if 'email' in body:
+        user.email = body['email']
+
+    db.session.commit()
+
+    return jsonify(user.serialize()), 200
+
+@app.route('/user/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    user = User.query.get(user_id)
+
+    if user is None:
+        return jsonify({"msg": "User not found"}), 404
+
+    db.session.delete(user)
+    db.session.commit()
+
+    return jsonify({"msg": "User deleted"}), 200
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
