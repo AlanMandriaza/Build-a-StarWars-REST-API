@@ -32,13 +32,13 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
-@app.route('/user', methods=['GET'])
+@app.route('/users', methods=['GET'])
 def get_users():
     users = User.query.all()
     users = list(map(lambda user: user.serialize(), users))
     return jsonify(users), 200
 
-@app.route('/user', methods=['POST'])
+@app.route('/users', methods=['POST'])
 def create_user():
     body = request.get_json()
 
@@ -58,20 +58,12 @@ def create_user():
     return jsonify(new_user.serialize()), 201
 
 
-@app.route('/user/<int:user_id>', methods=['PUT'])
-def update_user(user_id):
-    body = request.get_json()
+@app.route('/users/<int:user_id>', methods=['GET'])
+def get_user(user_id):
     user = User.query.get(user_id)
 
     if user is None:
         return jsonify({"msg": "User not found"}), 404
-
-    if 'username' in body:
-        user.username = body['username']
-    if 'email' in body:
-        user.email = body['email']
-
-    db.session.commit()
 
     return jsonify(user.serialize()), 200
 
@@ -104,34 +96,46 @@ def create_favorite():
 
     db.session.add(new_favorite)
     db.session.commit()
-
     return jsonify(new_favorite.serialize()), 201
 
 # Endpoint to get all favorites for a user
-@app.route('/favorite/user/<int:user_id>', methods=['GET'])
-def get_favorites_for_user(user_id):
+# Endpoint to get all user favorites
+@app.route('/users/favorites', methods=['GET'])
+def get_all_user_favorites():
+    favorites = Favorite.query.all()
+    favorites = list(map(lambda favorite: favorite.serialize(), favorites))
+
+    return jsonify(favorites), 200
+
+
+
+# Endpoint to create a new favorite planet for the current user
+@app.route('/favorite/planet', methods=['POST'])
+def add_favorite_planet():
+    body = request.get_json()
+
+    if 'user_id' not in body or 'planet_id' not in body:
+        return jsonify({"msg": "Missing user_id or planet_id field"}), 400
+
+    user_id = body['user_id']
+    planet_id = body['planet_id']
+
     user = User.query.get(user_id)
+    planet = Planet.query.get(planet_id)
 
     if user is None:
         return jsonify({"msg": "User not found"}), 404
 
-    favorites = user.favorites
-    favorites = list(map(lambda favorite: favorite.serialize(), favorites))
-
-    return jsonify(favorites), 200
-
-# Endpoint to get all favorites for a planet
-@app.route('/favorite/planet/<int:planet_id>', methods=['GET'])
-def get_favorites_for_planet(planet_id):
-    planet = Planet.query.get(planet_id)
-
     if planet is None:
         return jsonify({"msg": "Planet not found"}), 404
 
-    favorites = planet.favorites
-    favorites = list(map(lambda favorite: favorite.serialize(), favorites))
+    new_favorite = Favorite(user=user, planet=planet)
 
-    return jsonify(favorites), 200
+    db.session.add(new_favorite)
+    db.session.commit()
+
+    return jsonify(new_favorite.serialize()), 201
+
 
 # Endpoint to get all favorites for a character
 @app.route('/favorite/character/<int:character_id>', methods=['GET'])
@@ -225,6 +229,58 @@ def delete_planet(planet_id):
     db.session.commit()
 
     return jsonify({"msg": "Planeta eliminado"}), 200
+
+
+# Endpoint para crear un nuevo personaje favorito
+@app.route('/favorite/people', methods=['POST'])
+def create_favorite_character():
+    body = request.get_json()
+
+    if 'user_id' not in body or 'character_id' not in body:
+        return jsonify({"msg": "Missing required fields"}), 400
+
+    user = User.query.get(body['user_id'])
+    character = Character.query.get(body['character_id'])
+
+    if user is None:
+        return jsonify({"msg": "User not found"}), 404
+
+    if character is None:
+        return jsonify({"msg": "Character not found"}), 404
+
+    new_favorite = Favorite(user=user, character=character)
+
+    db.session.add(new_favorite)
+    db.session.commit()
+
+    return jsonify(new_favorite.serialize()), 201
+
+# Endpoint para crear un nuevo personaje
+@app.route('/people', methods=['POST'])
+def create_character():
+    body = request.get_json()
+
+    if 'name' not in body:
+        return jsonify({"msg": "Falta el campo name"}), 400
+
+    new_character = Character(name=body['name'])
+
+    if 'description' in body:
+        new_character.description = body['description']
+
+    db.session.add(new_character)
+    db.session.commit()
+
+    return jsonify(new_character.serialize()), 201
+
+# Endpoint para obtener todos los personajes
+@app.route('/people', methods=['GET'])
+def get_characters():
+    characters = Character.query.all()
+    characters = list(map(lambda character: character.serialize(), characters))
+
+    return jsonify(characters), 200
+
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':

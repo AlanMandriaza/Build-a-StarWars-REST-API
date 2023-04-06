@@ -1,6 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import ForeignKey, Column, Integer, String, DateTime
-import datetime
+from sqlalchemy import ForeignKey, Column, Integer, String
 
 db = SQLAlchemy()
 
@@ -10,7 +9,6 @@ class User(db.Model):
     password = db.Column(db.String(80), nullable=False)
     first_name = db.Column(db.String(120), nullable=True)
     last_name = db.Column(db.String(120), nullable=True)
-    subscription_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     favorites = db.relationship("Favorite", back_populates="user")
 
     def __repr__(self):
@@ -22,7 +20,8 @@ class User(db.Model):
             "email": self.email,
             "first_name": self.first_name,
             "last_name": self.last_name,
-            "subscription_date": self.subscription_date
+            "favorites": [favorite.serialize() for favorite in self.favorites]
+           
         }
 
 class Favorite(db.Model):
